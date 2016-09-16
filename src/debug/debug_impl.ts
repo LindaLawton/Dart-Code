@@ -146,6 +146,19 @@ export class DartDebugSession extends DebugSession {
 							let thread = this.threadManager.getThreadInfoFromRef(isolateRef);
 							thread.receivedPauseStart();
 						}
+
+						// Helpers to categories libraries as SDK/ExternalLibrary/not.
+						let isSdkLibrary = (l: VMLibraryRef) => l.name.startsWith("dart.");
+						let isExternalLibrary = (l: VMLibraryRef) => !isSdkLibrary(l) && l.name != ""; // Need to exclude local libraries too?
+
+						// Set whether libraries should be debuggable based on user settings.
+						return Promise.all(
+							isolate.libraries.map(library => {
+								if ((isSdkLibrary(library) && !this.debugSettings.debugSdkLibraries)
+									|| (isExternalLibrary(library) && !this.debugSettings.debugExternalLibraries))
+									this.observatory.setLibraryDebuggable(isolateRef.id, library.id, false);
+							})
+						);
 					}));
 				}
 
